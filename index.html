@@ -261,5 +261,137 @@ h1 {
   </div>
 </div>
 
+<script>
+const STORAGE_KEY = "my_water_records";
+const THEME_KEY = "my_panel_theme";
+
+function formatDate(dateObj) {
+  const y = dateObj.getFullYear();
+  const m = String(dateObj.getMonth() + 1).padStart(2, "0");
+  const d = String(dateObj.getDate()).padStart(2, "0");
+  return y + "-" + m + "-" + d;
+}
+
+const todayStr = formatDate(new Date());
+document.getElementById("today-date").textContent = todayStr;
+
+function getRecords() {
+  const data = localStorage.getItem(STORAGE_KEY);
+  if (!data) return {};
+  try {
+    return JSON.parse(data);
+  } catch (e) {
+    return {};
+  }
+}
+
+function saveRecords(records) {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(records));
+}
+
+function render() {
+  const records = getRecords();
+  const todayCount = records[todayStr] || 0;
+  document.getElementById("show").textContent = "今天喝了 " + todayCount + " 杯";
+
+  const chartContainer = document.getElementById("chart-container");
+  chartContainer.innerHTML = "";
+
+  const past7Days = [];
+  let maxVal = 5;
+
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    const dateKey = formatDate(d);
+    const count = records[dateKey] || 0;
+    if (count > maxVal) {
+      maxVal = count;
+    }
+    past7Days.push({
+      key: dateKey,
+      label: (d.getMonth() + 1) + "/" + d.getDate(),
+      count: count,
+      isToday: (i === 0)
+    });
+  }
+
+  past7Days.forEach(function (day) {
+    const col = document.createElement("div");
+    col.className = "bar-col" + (day.isToday ? " is-today" : "");
+
+    const val = document.createElement("div");
+    val.className = "bar-val";
+    val.textContent = day.count;
+
+    const fill = document.createElement("div");
+    fill.className = "bar-fill";
+    const heightPercent = Math.max(4, Math.round((day.count / maxVal) * 90));
+    fill.style.height = heightPercent + "px";
+
+    const label = document.createElement("div");
+    label.className = "bar-label";
+    label.textContent = day.isToday ? "今天" : day.label;
+
+    col.appendChild(val);
+    col.appendChild(fill);
+    col.appendChild(label);
+    chartContainer.appendChild(col);
+  });
+}
+
+document.getElementById("add").onclick = function () {
+  const records = getRecords();
+  records[todayStr] = (records[todayStr] || 0) + 1;
+  saveRecords(records);
+  render();
+};
+
+const confirmBox = document.getElementById("clear-confirm-box");
+const btnShowClear = document.getElementById("btn-show-clear");
+const btnConfirmClear = document.getElementById("btn-confirm-clear");
+const btnCancelClear = document.getElementById("btn-cancel-clear");
+
+btnShowClear.onclick = function () {
+  confirmBox.style.display = "block";
+  btnShowClear.style.display = "none";
+};
+
+btnCancelClear.onclick = function () {
+  confirmBox.style.display = "none";
+  btnShowClear.style.display = "inline-block";
+};
+
+btnConfirmClear.onclick = function () {
+  localStorage.removeItem(STORAGE_KEY);
+  confirmBox.style.display = "none";
+  btnShowClear.style.display = "inline-block";
+  render();
+};
+
+const themeToggle = document.getElementById("theme-toggle");
+
+function applyTheme(theme) {
+  if (theme === "dark") {
+    document.body.classList.add("dark");
+    themeToggle.textContent = "切換淺色";
+  } else {
+    document.body.classList.remove("dark");
+    themeToggle.textContent = "切換深色";
+  }
+}
+
+const savedTheme = localStorage.getItem(THEME_KEY) || "light";
+applyTheme(savedTheme);
+
+themeToggle.onclick = function () {
+  const currentIsDark = document.body.classList.contains("dark");
+  const nextTheme = currentIsDark ? "light" : "dark";
+  localStorage.setItem(THEME_KEY, nextTheme);
+  applyTheme(nextTheme);
+};
+
+render();
+</script>
 </body>
 </html>
